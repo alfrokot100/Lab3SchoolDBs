@@ -11,11 +11,12 @@ namespace Lab2SchoolDBs
         static void Main(string[] args)
         {
             //Skapar meny för användare
-            Console.WriteLine("Välje ett alternativ!");
+            Console.WriteLine("Välj ett alternativ!");
             Console.WriteLine("1. Visa all personal");
             Console.WriteLine("2. Visa personal inom en viss roll");
-            Console.WriteLine("3. Hämta alla elever. Inklusive sortering");
-            Console.WriteLine("4. Hämta alla elever i en viss klass\n");
+            Console.WriteLine("3. Lista på alla elever Inklusive sortering");
+            Console.WriteLine("4. Visa en lista på alla aktiva kurser");
+            Console.WriteLine("5. Lista på antal lärare i respektive avdelning\n");
 
             string choice = Console.ReadLine();
             //Switch sats med alla funktioner som skapats
@@ -27,7 +28,9 @@ namespace Lab2SchoolDBs
                     break;
                 case "3": ShowAllStudents();
                     break;
-                case "4": StudentsFromClass();
+                case "4": ActiveCourses();
+                    break;
+                case "5": DepartmentList();
                     break;
             }
         }
@@ -42,8 +45,8 @@ namespace Lab2SchoolDBs
 
                 foreach(var p in personal)
                 {
-                    Console.WriteLine($"Namn: {p.FirstName} {p.LastName}");
-                    Console.WriteLine($"Roll: {p.Roll}");
+                    Console.WriteLine($"Namn: {p.FirstNamn} {p.LastName}");
+                    Console.WriteLine($"Roll: {p.Field}");
                     Console.WriteLine($"Personal ID: {p.PersonalId}");
                     Console.WriteLine();
                 }
@@ -58,7 +61,7 @@ namespace Lab2SchoolDBs
             {
                 //Jämför användarens input av roll med rollerna som finns listade 
                 var personalList = context.Personals
-                    .Where(p => p.Roll.ToLower() == roll.ToLower())
+                    .Where(p => p.Field.ToLower() == roll.ToLower())
                     .ToList();
 
                 if (personalList.Any())
@@ -68,11 +71,12 @@ namespace Lab2SchoolDBs
                     foreach(var p in personalList)
                     {
                         Console.WriteLine($"Personal ID: {p.PersonalId}");
-                        Console.WriteLine($"Namn: {p.FirstName} {p.LastName}");
-                        Console.WriteLine($"Roll: {p.Roll}");
+                        Console.WriteLine($"Namn: {p.FirstNamn} {p.LastName}");
+                        Console.WriteLine($"Roll: {p.Field}");
                         Console.WriteLine();
                     }
                 }
+                //Vid fel input kastas ett felmeddelande
                 else 
                 { Console.WriteLine($"Finns ingen person med rollen {roll} som du angav!"); }
             } 
@@ -123,7 +127,7 @@ namespace Lab2SchoolDBs
                     Console.WriteLine("----- Lista över studenter--------");
                     foreach(var s in studentList)
                     {
-                        Console.WriteLine($"Namn: {s.FirstName} {s.LastName}, Kurs: {s.Kurs}");
+                        Console.WriteLine($"Namn: {s.FirstName} {s.LastName}, PersonNmr: {s.PersonalNbr}");
                         Console.WriteLine();
                     }
                 }
@@ -131,44 +135,51 @@ namespace Lab2SchoolDBs
             }
         }
 
-        static void StudentsFromClass()
+        static void ActiveCourses()
+        {
+            Console.WriteLine("Lista på alla aktiva kurser...\n");
+
+            //Listar alla aktiva kurser
+            using(var context = new SchoolDBContext())
+            {
+                var kursList = context.Courses
+                    .Where(k => k.IsActive == true)
+                    .ToList();
+                foreach(var k in kursList)
+                {
+                    Console.WriteLine($"Kurskod: {k.CourseCode}");
+                    Console.WriteLine($"Kursnamn: {k.CourseName}");
+                    Console.WriteLine();
+                }
+            }
+        }
+
+        static void DepartmentList()
         {
             using(var context = new SchoolDBContext())
             {
-                // Hämtar alla studenter från databasen och konverterar resultatet till en lista
-                var showStudents = context.Students.ToList();
-
-                // Skriver in lista med alla studenter ochd reas information
-                foreach(var s in showStudents)
+                // Hämtar en lista över alla lärare och grupperar dem per avdelning
+                var depList = context.Personals
+                    .Where(p => p.Field.ToLower() == "Lärare")
+                    .GroupBy(p => p.Department)
+                   
+                    // Grupperar de filtrerade lärarna baserat på deras avdelning (Department)
+                    .Select(group => new
+                    {
+                        Department = group.Key,
+                        TeacherCount = group.Count()
+                    })
+                    .ToList();
+                Console.WriteLine("Antal lärare i avdelning...\n");
+                foreach(var d in depList)
                 {
-                    Console.WriteLine($"Namn: {s.FirstName} {s.LastName}");
-                    Console.WriteLine($"Personnummer: {s.PersonNummer}");
-                    Console.WriteLine($"Kurs: {s.Kurs}");
+                    Console.WriteLine($"Avdelning: {d.Department}");
+                    Console.WriteLine($"Antal Lärare: {d.TeacherCount}");
                     Console.WriteLine();
                 }
-                //Användaren matar in kurs
-                Console.Write("Ange den kurs du vill se studenterna i: ");
-                string choice = Console.ReadLine();
-
-                // Filtrerar studenter baserat på kursen som användaren angav
-                var studentList = context.Students
-                    .Where(s => s.Kurs.ToLower() == choice.ToLower())
-                    .ToList();
-
-                // Kontrollera om det finns studenter i den angivna kursen
-                if (studentList.Any())
-                {
-                    Console.WriteLine($"\nStudenter i klassen {choice}");
-                    foreach(var s in studentList)
-                    {
-                        Console.WriteLine($"Namn: {s.FirstName} {s.LastName}");
-                        Console.WriteLine($"Personnummer: {s.PersonNummer}");
-                        Console.WriteLine($"Kurs: {s.Kurs}");
-                        Console.WriteLine();
-                    }
-                }
-                else { Console.WriteLine($"Finns inga studenter i klassen {choice}");  }          
             }
         }
+
+
     }
 }
